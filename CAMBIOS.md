@@ -18,8 +18,9 @@ MET COFFEE es una API REST para una tienda de café. La aplicación gestiona:
 - dashboard administrativo;
 - productos, usuarios y pedidos desde endpoints administrativos.
 
-La aplicación usa Java 17, Spring Boot 3.4.0, Spring Web, Spring Data MongoDB, Bean Validation,
-Spring Security Crypto y Actuator. MongoDB es la persistencia real de la aplicación. Las pruebas
+La configuración vigente usa Java 25, Spring Boot 3.5.16, Spring Web, Spring Data MongoDB, Bean Validation,
+Spring Security Crypto y Actuator. La aplicación fue migrada desde Java 17 / Spring Boot 3.4.0; el detalle
+de esa migración está en la sección 18. MongoDB es la persistencia real de la aplicación. Las pruebas
 unitarias usan Mockito y no necesitan conectarse a MongoDB.
 
 La estructura es equivalente a la organización esperada de `librarydb` (modelos, repositorios, DTOs,
@@ -66,7 +67,8 @@ respuestas HTTP con un campo `message`.
 
 ### 3.1 `pom.xml`
 
-El archivo define el proyecto Maven `com.metcoffee:met-coffee:1.0.0` y Java 17. Las dependencias son:
+El archivo define el proyecto Maven `com.metcoffee:met-coffee:1.0.0` y actualmente compila con Java 25.
+La configuración inicial usaba Java 17; la actualización está documentada en la sección 18. Las dependencias son:
 
 - `spring-boot-starter-web`: controllers REST, JSON y servidor embebido.
 - `spring-boot-starter-data-mongodb`: conexión, mapeo `@Document` y repositorios MongoDB.
@@ -640,10 +642,32 @@ unitarias ni cambiar los modelos, servicios o datos funcionales del proyecto:
 - `postman/MetCoffee.postman_collection.json`: añade aserciones JavaScript para los flujos de cuenta,
   productos, catálogo, carrito, domicilios, compra y pedidos, y casos negativos de credenciales,
   autorización, producto inválido y domicilio inexistente.
-- `.github/workflows/ci.yml`: mantiene JDK 17, ejecuta las pruebas unitarias, ejecuta el perfil
+- `.github/workflows/ci.yml`: en la configuración original de noviembre mantenía JDK 17 (actualizado a Java 25 en la sección 18), ejecutaba las pruebas unitarias, ejecutaba el perfil
   `integration` contra MongoDB rs0 y corre la colección completa de Newman. Las solicitudes que requieren
   administrador se omiten cuando no se proporciona un JWT administrativo; las pruebas negativas de
   autorización sí se ejecutan sin ese token.
 
 Las operaciones automatizadas usan la base `metcoffee_test`; no se deben ejecutar estas pruebas contra
 la base de producción o MongoDB Atlas.
+
+### Corrección del arranque de MongoDB en GitHub Actions
+
+Se corrigió `.github/workflows/ci.yml`: `--replSet rs0` y `--bind_ip_all` son argumentos de `mongod`, no opciones aceptadas por `docker create`. El workflow ahora crea el contenedor con `docker run ... mongo:7.0 mongod --replSet rs0 --bind_ip_all`, espera a que MongoDB responda, inicializa el replica set `rs0`, ejecuta Maven y Newman, publica los reportes y elimina el contenedor al terminar. No se cambiaron modelos, servicios, controladores ni datos funcionales.
+
+
+## 18. Migración del proyecto a Java 25 (noviembre de 2026)
+
+Se migró la configuración técnica del proyecto a Java 25 para trabajar con el JDK disponible en GitHub Codespaces. Se conservaron los modelos, controladores, servicios, repositorios, DTO, datos y reglas funcionales.
+
+Archivos actualizados:
+
+- `pom.xml`: Java 25 (`java.version` y `maven.compiler.release`), Spring Boot 3.5.16, Maven Compiler Plugin 3.16.0, Surefire/Failsafe 3.6.1 y Mockito 5.24.0. Spring Boot 3.5.16 declara compatibilidad hasta Java 25; Mockito 5.18.0 o superior incorpora soporte para Java 25.
+- `.devcontainer/devcontainer.json`: imagen oficial `mcr.microsoft.com/devcontainers/java:25-bookworm`, Maven y Docker-in-Docker 4.1.3. Se eliminó el `JAVA_HOME` manual.
+- `.github/workflows/ci.yml`: GitHub Actions ahora configura JDK 25, ejecuta `mvn clean -Pintegration verify`, levanta MongoDB como replica set, ejecuta Newman con Node.js 22 y publica reportes.
+- `Dockerfile`: las etapas de compilación y ejecución usan Java 25; la etapa de compilación usa Maven 3.9.16.
+- `docker-compose.yml`: MongoDB local usa un inicializador idempotente y espera a que el nodo sea PRIMARY.
+- `PRUEBAS.md`: requisitos y comandos actualizados a Java 25.
+
+La migración de Java no exige cambiar el código de negocio: el código fuente existente sigue utilizando construcciones compatibles. La actualización de Spring Boot 3.4.0 a 3.5.16 es necesaria porque Spring Boot 3.4 declara compatibilidad hasta Java 24, mientras que 3.5.16 incluye Java 25. Se mantuvo Spring Boot 3.x para evitar el salto de compatibilidad y los cambios mayores de Spring Boot 4.
+
+**Validación pendiente en Codespaces/GitHub Actions:** el entorno de esta edición no dispone de Maven ni Docker, por lo que no se pudo ejecutar `mvn clean -Pintegration verify` ni construir la imagen Docker. Después de actualizar el repositorio, reconstruir el Codespace y ejecutar las pruebas.

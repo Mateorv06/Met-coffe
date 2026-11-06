@@ -6,10 +6,11 @@ services:
     ports:
       - "27018:27017"
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' localhost:27017/test | grep 1"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 }).ok"]
       interval: 5s
       timeout: 5s
       retries: 20
+      start_period: 5s
     volumes:
       - metcoffee-mongodb-test-data:/data/db
 
@@ -19,9 +20,36 @@ services:
       mongodb-test:
         condition: service_healthy
     restart: "no"
-    entrypoint: ["mongosh", "--host", "mongodb-test:27017", "--eval"]
+    entrypoint: ["mongosh", "--host", "mongodb-test:27017", "--quiet", "--eval"]
     command:
-      - "rs.initiate()"
+      - |
+        try {
+          rs.status();
+          print("Replica set rs0 ya estaba inicializado");
+        } catch (error) {
+          printjson(rs.initiate({
+            _id: "rs0",
+            members: [{ _id: 0, host: "mongodb-test:27017" }]
+          }));
+        }
+
+        let primary = false;
+        for (let attempt = 0; attempt < 30; attempt++) {
+          try {
+            if (db.hello().isWritablePrimary) {
+              primary = true;
+              break;
+            }
+          } catch (error) {}
+          sleep(1000);
+        }
+
+        if (!primary) {
+          print("MongoDB no logró convertirse en PRIMARY");
+          quit(1);
+        }
+
+        print("MongoDB replica set rs0 listo");
 
 volumes:
   metcoffee-mongodb-test-data:

@@ -1,19 +1,18 @@
-# Etapa de compilación
-FROM eclipse-temurin:17-jdk-alpine AS build
+# Etapa de compilación: Maven y JDK 25
+FROM maven:3.9.16-eclipse-temurin-25-alpine AS build
 WORKDIR /app
-# Instalar Maven en la imagen alpina ligera
-RUN apk add --no-cache maven
-# Copiar el pom.xml y descargar dependencias
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
-# Copiar el código fuente y empaquetar la app omitiendo pruebas
-COPY src src
-RUN mvn package -DskipTests
 
-# Etapa de ejecución
-FROM eclipse-temurin:17-jre-alpine
+COPY pom.xml .
+RUN mvn -B dependency:go-offline
+
+COPY src src
+RUN mvn -B clean package -DskipTests
+
+# Etapa de ejecución: JRE 25
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
-# Copiar el archivo .jar generado en la etapa anterior
-COPY --from=build /app/target/*.jar app.jar
+
+COPY --from=build /app/target/met-coffee-1.0.0.jar app.jar
+
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

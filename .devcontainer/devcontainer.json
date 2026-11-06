@@ -1,8 +1,27 @@
 {
-  "name": "Met Coffee Java 17",
-  "image": "mcr.microsoft.com/devcontainers/java:1-17-bookworm",
+  "name": "Met Coffee Java 25",
+  "image": "mcr.microsoft.com/devcontainers/java:25-bookworm",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "none",
+      "installMaven": true,
+      "installGradle": false
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:4.1.3": {}
+  },
+  "forwardPorts": [
+    8080,
+    27018
+  ],
+  "portsAttributes": {
+    "8080": {
+      "label": "Met Coffee API",
+      "onAutoForward": "notify"
+    },
+    "27018": {
+      "label": "MongoDB pruebas",
+      "onAutoForward": "silent"
+    }
   },
   "customizations": {
     "vscode": {
@@ -12,8 +31,5 @@
       ]
     }
   },
-  "remoteEnv": {
-    "JAVA_HOME": "/usr/local/sdkman/candidates/java/current"
-  },
-  "postCreateCommand": "java -version && mvn -version"
+  "postCreateCommand": "java -version && mvn -version && docker --version && docker compose version"
 }

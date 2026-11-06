@@ -1,88 +1,123 @@
 name: CI
 
-# Controla cuándo se ejecutará la automatización
 on:
   push:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    services:
-      mongodb:
-        image: mongo:7.0
-        ports:
-          - 27018:27017
-        options: >-
-          --replSet rs0
-          --bind_ip_all
-          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
+    timeout-minutes: 35
+
     steps:
-      # Paso 1: Descarga el código de tu repositorio en el servidor de GitHub Actions
       - name: Clonar el repositorio
         uses: actions/checkout@v4
 
-      # Paso 2: Configura el entorno de Java (JDK) en el servidor virtual
-      - name: Configurar JDK 17
+      - name: Configurar JDK 25
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '25'
           distribution: 'temurin'
-          cache: maven # Esto acelera las descargas de dependencias en futuros cambios
+          cache: maven
 
-      - name: Compilar
-        run: mvn -B -DskipTests compile
+      - name: Iniciar MongoDB de pruebas como replica set
+        shell: bash
+        run: |
+          set -euo pipefail
 
-      - name: Inicializar replica set MongoDB
-        run: >-
-          docker run --rm --network host mongo:7.0
-          mongosh --host 127.0.0.1:27018 --eval "rs.initiate()"
+          docker run -d \
+            --name metcoffee-mongodb-test \
+            -p 27018:27017 \
+            mongo:7.0 mongod --replSet rs0 --bind_ip_all
 
-      - name: Ejecutar pruebas unitarias con Maven
-        run: mvn -B test
+          echo "Esperando a que MongoDB responda..."
+          for attempt in $(seq 1 30); do
+            if docker exec metcoffee-mongodb-test \
+              mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' 2>/dev/null | grep -q '^1$'; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              docker logs metcoffee-mongodb-test
+              echo "MongoDB no inició correctamente."
+              exit 1
+            fi
+            sleep 2
+          done
 
-      - name: Ejecutar pruebas de integración con Maven
+          echo "Inicializando replica set rs0..."
+          docker exec metcoffee-mongodb-test \
+            mongosh --quiet --eval \
+            'rs.initiate({_id: "rs0", members: [{_id: 0, host: "127.0.0.1:27017"}]})'
+
+          echo "Esperando a que MongoDB sea PRIMARY..."
+          for attempt in $(seq 1 60); do
+            primary=$(docker exec metcoffee-mongodb-test \
+              mongosh --quiet --eval 'db.hello().isWritablePrimary' 2>/dev/null | tr -d '\r')
+
+            if [ "$primary" = "true" ]; then
+              echo "MongoDB replica set rs0 está listo."
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker logs metcoffee-mongodb-test
+          echo "MongoDB no logró convertirse en PRIMARY."
+          exit 1
+
+      - name: Ejecutar pruebas unitarias y de integración Java
         env:
           MONGODB_TEST_URI: mongodb://127.0.0.1:27018/metcoffee_test?replicaSet=rs0&directConnection=true
-        run: mvn -B -Pintegration verify
+        run: mvn -B clean -Pintegration verify
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: postman/package-lock.json
 
       - name: Iniciar API para Newman
         env:
           MONGODB_TEST_URI: mongodb://127.0.0.1:27018/metcoffee_test?replicaSet=rs0&directConnection=true
+        shell: bash
         run: |
-          nohup mvn -B spring-boot:run -Dspring-boot.run.profiles=test > /tmp/metcoffee-api.log 2>&1 &
-          for attempt in $(seq 1 30); do
+          nohup mvn -B spring-boot:run \
+            -Dspring-boot.run.profiles=test > /tmp/metcoffee-api.log 2>&1 &
+
+          for attempt in $(seq 1 45); do
             if curl --fail --silent http://127.0.0.1:8080/actuator/health > /dev/null; then
+              echo "API iniciada correctamente."
               exit 0
             fi
             sleep 2
           done
+
           cat /tmp/metcoffee-api.log
+          echo "No fue posible iniciar Met Coffee."
           exit 1
 
-      - name: Ejecutar Newman
+      - name: Ejecutar pruebas Postman con Newman
         run: |
           npm ci --prefix postman
           npm run --prefix postman test:api:report
 
-      - name: Publicar reportes de Newman
+      - name: Publicar reportes de Newman y Maven
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: newman-reports
+          name: reportes-pruebas-metcoffee
+          if-no-files-found: warn
           path: |
             postman/reports/
             target/surefire-reports/
             target/failsafe-reports/
+
+      - name: Detener MongoDB de pruebas
+        if: always()
+        run: docker rm -f metcoffee-mongodb-test || true
