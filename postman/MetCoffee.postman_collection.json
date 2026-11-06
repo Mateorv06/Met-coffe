@@ -1,0 +1,1196 @@
+{
+  "info": {
+    "name": "Met Coffee API",
+    "_postman_id": "met-coffee-api-tests",
+    "description": "Pruebas de API para una instancia local configurada con MongoDB de pruebas. No ejecutar contra Atlas.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const requestName = pm.info.requestName;",
+          "if (requestName === 'Registrar usuario') {",
+          "  const suffix = Date.now().toString();",
+          "  pm.environment.set('usuarioPrueba', 'postman_' + suffix);",
+          "  pm.environment.set('correoPrueba', 'postman_' + suffix + '@test.local');",
+          "  pm.environment.unset('productoId');",
+          "  pm.environment.unset('direccionId');",
+          "  pm.environment.unset('pedidoId');",
+          "}",
+          "const clientToken = pm.environment.get('clienteToken');",
+          "const adminToken = pm.environment.get('adminToken');",
+          "const requestUrl = pm.request.url.toString();",
+          "if (/\\/api\\/admin\\//.test(requestUrl) && requestName !== 'Acceso administrativo sin token') {",
+          "  if (!adminToken) { pm.execution.skipRequest(); }",
+          "  else { pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + adminToken }); }",
+          "}",
+          "if (clientToken && /\\/api\\/(cuenta\\/[^/]+\\/fusionar-carrito|carrito|domicilios|compras|pedidos)/.test(requestUrl)) {",
+          "  pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + clientToken });",
+          "}",
+          "const needsProduct = ['Consultar producto', 'Configurar bolsa', 'Agregar producto al carrito', 'Agregar bolsa al carrito', 'Actualizar item', 'Eliminar item', 'Actualizar producto admin', 'Subir imagen admin', 'Desactivar producto admin', 'Consultar inventario', 'Ajustar inventario', 'Movimientos de producto', 'Confirmar compra con domicilio inexistente (caso negativo)'];",
+          "if (needsProduct.includes(requestName) && !pm.environment.get('productoId')) { pm.execution.skipRequest(); }",
+          "const needsAddress = ['Actualizar domicilio', 'Seleccionar domicilio principal', 'Confirmar compra con domicilio inexistente (caso negativo)'];",
+          "if (needsAddress.includes(requestName) && !pm.environment.get('direccionId')) { pm.execution.skipRequest(); }",
+          "const needsOrder = ['Detalle de pedido', 'Cancelar pedido', 'Detalle pedido admin', 'Actualizar estado pedido admin'];",
+          "if (needsOrder.includes(requestName) && !pm.environment.get('pedidoId')) { pm.execution.skipRequest(); }"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('La respuesta tiene código HTTP', function () { pm.expect(pm.response.code).to.be.a('number'); });",
+          "if (pm.response.text()) { pm.test('El cuerpo JSON es válido cuando existe', function () { pm.response.json(); }); }"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ],
+  "item": [
+    {
+      "name": "Cuenta",
+      "item": [
+        {
+          "name": "Registrar usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Registro creado con HTTP 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('El registro devuelve un ID y rol de cliente', () => { pm.expect(body.id).to.be.a('string').and.not.empty; pm.expect(body.rol).to.eql('CLIENTE'); });",
+                  "pm.environment.set('usuarioId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombreUsuario\": \"{{usuarioPrueba}}\",\n  \"correo\": \"{{correoPrueba}}\",\n  \"password\": \"{{passwordPrueba}}\",\n  \"telefono\": \"3001234567\"\n}"
+            },
+            "url": "{{baseUrl}}/api/cuenta/registro"
+          }
+        },
+        {
+          "name": "Iniciar sesión",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login correcto con HTTP 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Login devuelve JWT y usuario', () => { pm.expect(body.token).to.be.a('string').and.not.empty; pm.expect(body.usuario.id).to.eql(pm.environment.get('usuarioId')); });",
+                  "pm.environment.set('clienteToken', body.token);",
+                  "pm.environment.set('usuarioId', body.usuario.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correoPrueba}}\",\n  \"password\": \"{{passwordPrueba}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/cuenta/login"
+          }
+        },
+        {
+          "name": "Iniciar sesión administrador (requiere variables locales)",
+          "disabled": false,
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.environment.get('adminCorreo') || !pm.environment.get('adminPassword')) { pm.execution.skipRequest(); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login administrativo correcto', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Se recibe un JWT de administrador', () => pm.expect(body.token).to.be.a('string').and.not.empty);",
+                  "pm.environment.set('adminToken', body.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{adminCorreo}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/cuenta/login"
+          }
+        },
+        {
+          "name": "Fusionar carrito visitante",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuarioId\": \"visitante\",\n  \"items\": []\n}"
+            },
+            "url": "{{baseUrl}}/api/cuenta/{{usuarioId}}/fusionar-carrito"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El carrito visitante se fusiona sin contenido de respuesta (HTTP 204)', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login con credenciales incorrectas (caso negativo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/cuenta/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"no-existe-{{$timestamp}}@test.local\",\n  \"password\": \"ClaveIncorrecta123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Credenciales incorrectas son rechazadas con HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('La API informa el error de autenticación', () => pm.expect(pm.response.json().message).to.eql('Credenciales inválidas'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Seguridad",
+      "item": [
+        {
+          "name": "Acceso administrativo sin token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/productos"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.remove('Authorization');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Los endpoints administrativos rechazan solicitudes sin JWT (HTTP 401)', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Compra sin token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/compras/usuario-sin-token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"direccionId\": \"direccion-no-usada\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.remove('Authorization');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La compra rechaza solicitudes sin JWT (HTTP 401)', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Administración - productos",
+      "item": [
+        {
+          "name": "Listar productos admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/productos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El listado administrativo responde HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('El resultado es una lista JSON', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear producto con datos inválidos (caso negativo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"\",\n  \"origen\": \"Colombia\",\n  \"perfil\": \"Prueba inválida\",\n  \"precioBase\": 28000,\n  \"stockGramos\": 500,\n  \"novedad\": false,\n  \"activo\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La API rechaza el nombre vacío con HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear producto admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El producto se crea con HTTP 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('La respuesta contiene ID y los datos enviados', () => { pm.expect(body.id).to.be.a('string').and.not.empty; pm.expect(body.nombre).to.eql('Cafe Postman'); });",
+                  "pm.environment.set('productoId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Cafe Postman\",\n  \"origen\": \"Colombia\",\n  \"perfil\": \"Chocolate\",\n  \"precioBase\": 28000,\n  \"stockGramos\": 5000,\n  \"novedad\": true,\n  \"activo\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/productos"
+          }
+        },
+        {
+          "name": "Actualizar producto admin",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Cafe Postman actualizado\",\n  \"origen\": \"Colombia\",\n  \"perfil\": \"Chocolate y frutos rojos\",\n  \"precioBase\": 29000,\n  \"stockGramos\": 5000,\n  \"novedad\": true,\n  \"activo\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/productos/{{productoId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El producto se actualiza con HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('La API devuelve el nombre actualizado', () => pm.expect(pm.response.json().nombre).to.eql('Cafe Postman actualizado'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catálogo",
+      "item": [
+        {
+          "name": "Listar catálogo",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/catalogo"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El catálogo público responde HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('El catálogo devuelve una lista JSON', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar novedades",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/catalogo/novedades"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Las novedades responden HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Las novedades devuelven una lista JSON', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar producto",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/catalogo/{{productoId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El detalle público responde HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('El detalle corresponde al producto creado', () => pm.expect(pm.response.json().id).to.eql(pm.environment.get('productoId')));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bolsa y carrito",
+      "item": [
+        {
+          "name": "Configurar bolsa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tamano\": \"250\",\n  \"compartimentos\": 2,\n  \"componentes\": [\n    { \"productoId\": \"{{productoId}}\", \"molienda\": \"Grano\" },\n    { \"productoId\": \"{{productoId}}\", \"molienda\": \"Molido\" }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/bolsa/configurar"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La configuración de bolsa responde HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('La respuesta contiene precio y compartimentos', () => { const body = pm.response.json(); pm.expect(body.precio).to.be.a('number'); pm.expect(body.compartimentos).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar carrito",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/carrito/{{usuarioId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Consultar carrito responde HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('El carrito pertenece al usuario de prueba', () => pm.expect(pm.response.json().usuarioId).to.eql(pm.environment.get('usuarioId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agregar producto al carrito",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": \"{{productoId}}\",\n  \"cantidad\": 1,\n  \"molienda\": \"Grano\",\n  \"gramos\": 125\n}"
+            },
+            "url": "{{baseUrl}}/api/carrito/{{usuarioId}}/productos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Agregar producto responde HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('El carrito contiene el producto', () => pm.expect(pm.response.json().items).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agregar bolsa al carrito",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tamano\": \"250\",\n  \"compartimentos\": 2,\n  \"componentes\": [\n    { \"productoId\": \"{{productoId}}\", \"molienda\": \"Grano\" },\n    { \"productoId\": \"{{productoId}}\", \"molienda\": \"Molido\" }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/carrito/{{usuarioId}}/bolsas"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Agregar bolsa responde HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('El carrito contiene la bolsa', () => pm.expect(pm.response.json().items).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cantidad\": 2,\n  \"molienda\": \"Molido\",\n  \"gramos\": 125\n}"
+            },
+            "url": "{{baseUrl}}/api/carrito/{{usuarioId}}/items/0"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Actualizar item responde HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eliminar item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/carrito/{{usuarioId}}/items/0"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Eliminar item responde HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Limpiar carrito",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/carrito/{{usuarioId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Limpiar carrito responde HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Domicilios y compras",
+      "item": [
+        {
+          "name": "Listar domicilios",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/domicilios/{{usuarioId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Los domicilios responden HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('El resultado es una lista JSON', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear domicilio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El domicilio se crea con HTTP 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('El domicilio creado devuelve ID', () => pm.expect(body.id).to.be.a('string').and.not.empty);",
+                  "pm.environment.set('direccionId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etiqueta\": \"Casa\",\n  \"destinatario\": \"Usuario Postman\",\n  \"direccion\": \"Calle de pruebas 123\",\n  \"telefono\": \"3001234567\",\n  \"principal\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/domicilios/{{usuarioId}}"
+          }
+        },
+        {
+          "name": "Actualizar domicilio",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etiqueta\": \"Casa actualizada\",\n  \"destinatario\": \"Usuario Postman\",\n  \"direccion\": \"Calle de pruebas 456\",\n  \"telefono\": \"3001234567\",\n  \"principal\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/domicilios/{{usuarioId}}/{{direccionId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El domicilio se actualiza con HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Se devuelve la dirección actualizada', () => pm.expect(pm.response.json().direccion).to.eql('Calle de pruebas 456'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seleccionar domicilio principal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/domicilios/{{usuarioId}}/{{direccionId}}/principal"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Seleccionar domicilio principal responde HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Confirmar compra con domicilio inexistente (caso negativo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/compras/{{usuarioId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"direccionId\": \"domicilio-inexistente-postman\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La compra con domicilio inexistente se rechaza con HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('La API informa que el domicilio no existe', () => pm.expect(pm.response.json().message).to.eql('Domicilio no encontrado'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Confirmar compra",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const hayProducto = !!pm.environment.get('productoId');",
+                  "if (hayProducto) {",
+                  "  pm.test('La compra se confirma con HTTP 201', () => pm.response.to.have.status(201));",
+                  "  const body = pm.response.json();",
+                  "  pm.test('La respuesta contiene pedido, total e items', () => { pm.expect(body.id).to.be.a('string').and.not.empty; pm.expect(body.total).to.be.a('number').and.above(0); pm.expect(body.items).to.be.an('array').that.is.not.empty; });",
+                  "  pm.environment.set('pedidoId', body.id);",
+                  "} else {",
+                  "  pm.test('Sin producto preparado, el carrito vacío se rechaza con HTTP 409', () => pm.response.to.have.status(409));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"direccionId\": \"{{direccionId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/compras/{{usuarioId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pedidos",
+      "item": [
+        {
+          "name": "Historial de pedidos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/pedidos/{{usuarioId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El historial de pedidos responde HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('El historial devuelve una lista JSON', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle de pedido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/pedidos/{{usuarioId}}/{{pedidoId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El detalle del pedido responde HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('El ID coincide con el pedido creado', () => pm.expect(pm.response.json().id).to.eql(pm.environment.get('pedidoId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelar pedido",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/pedidos/{{usuarioId}}/{{pedidoId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La cancelación responde HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Administración",
+      "item": [
+        {
+          "name": "Subir imagen admin",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/admin/productos/{{productoId}}/imagen"
+          },
+          "disabled": true
+        },
+        {
+          "name": "Desactivar producto admin",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/productos/{{productoId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Desactivar producto responde HTTP 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar pedidos admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/pedidos"
+          }
+        },
+        {
+          "name": "Detalle pedido admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/pedidos/{{pedidoId}}"
+          }
+        },
+        {
+          "name": "Actualizar estado pedido admin",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"ENVIADO\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/pedidos/{{pedidoId}}/estado"
+          }
+        },
+        {
+          "name": "Consultar inventario",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/inventario/{{productoId}}"
+          }
+        },
+        {
+          "name": "Ajustar inventario",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stockGramos\": 5000,\n  \"nota\": \"Ajuste de pruebas\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/inventario/{{productoId}}"
+          }
+        },
+        {
+          "name": "Movimientos de inventario",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/inventario/movimientos"
+          }
+        },
+        {
+          "name": "Movimientos de producto",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/inventario/{{productoId}}/movimientos"
+          }
+        },
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/dashboard?limiteBajoStock=500"
+          }
+        },
+        {
+          "name": "Listar usuarios",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/usuarios"
+          }
+        },
+        {
+          "name": "Consultar usuario",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/usuarios/{{usuarioId}}"
+          }
+        },
+        {
+          "name": "Cambiar rol usuario",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rol\": \"CLIENTE\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/usuarios/{{usuarioId}}/rol"
+          }
+        },
+        {
+          "name": "Eliminar usuario",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/usuarios/{{usuarioId}}"
+          }
+        }
+      ]
+    }
+  ]
+}

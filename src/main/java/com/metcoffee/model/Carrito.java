@@ -1,0 +1,3 @@
+package com.metcoffee.model;
+import java.util.*; import org.springframework.data.annotation.Id; import org.springframework.data.mongodb.core.mapping.Document;
+@Document("carritos") public class Carrito { @Id private String id; private String usuarioId; private List<ItemCarrito> items=new ArrayList<>(); public Carrito(){} public Carrito(String id,String u){this.id=id;usuarioId=u;} public String getId(){return id;} public String getUsuarioId(){return usuarioId;} public List<ItemCarrito> getItems(){return items;} public void setId(String v){id=v;} public void setUsuarioId(String v){usuarioId=v;} public void setItems(List<ItemCarrito> v){items=new ArrayList<>(v);} }

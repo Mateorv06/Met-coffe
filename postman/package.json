@@ -1,0 +1,12 @@
+{
+  "name": "met-coffee-postman-tests",
+  "private": true,
+  "scripts": {
+    "test:api": "newman run MetCoffee.postman_collection.json -e MetCoffee.postman_environment.json",
+    "test:api:report": "newman run MetCoffee.postman_collection.json -e MetCoffee.postman_environment.json --reporters cli,junit,json --reporter-junit-export reports/newman.xml --reporter-json-export reports/newman.json",
+    "pretest:api:report": "node -e \"require('fs').mkdirSync('reports', { recursive: true })\""
+  },
+  "devDependencies": {
+    "newman": "^6.2.1"
+  }
+}

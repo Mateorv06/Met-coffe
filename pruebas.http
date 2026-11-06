@@ -1,0 +1,17 @@
+### 1. Consultar productos
+GET http://localhost:8080/api/admin/productos
+
+### 2. Crear un nuevo producto
+POST http://localhost:8080/api/admin/productos
+Content-Type: application/json
+
+{
+  "nombre": "Café Especial Robledo",
+  "origen": "Medellín, Colombia",
+  "perfil": "Notas de chocolate y frutos rojos",
+  "imagen": "cafe-robledo.jpg",
+  "precioBase": 28000,
+  "stockGramos": 5000,
+  "novedad": true,
+  "activo": true
+}
