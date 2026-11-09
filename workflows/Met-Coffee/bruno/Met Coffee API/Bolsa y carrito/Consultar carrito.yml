@@ -8,7 +8,7 @@ http:
   url: "{{baseUrl}}/api/carrito/{{usuarioId}}"
   headers:
     - name: Authorization
-      value: Bearer {{token}}
+      value: Bearer {{clienteToken}}
   auth: inherit
 
 runtime:
@@ -16,7 +16,7 @@ runtime:
     - type: after-response
       code: |-
         test('Consultar carrito responde HTTP 200', () => expect(res.getStatus()).to.equal(200));
-        test('El carrito pertenece al usuario de prueba', () => expect(res.getBody().usuarioId).to.eql(bru.getEnvVar('usuarioId')));
+        test('El carrito pertenece al usuario de prueba', () => expect((res.getBody() || {}).usuarioId).to.eql(bru.getVar('usuarioId')));
 
 settings:
   encodeUrl: true

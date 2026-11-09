@@ -27,7 +27,11 @@ runtime:
     - type: after-response
       code: |-
         test('La configuración de bolsa responde HTTP 200', () => expect(res.getStatus()).to.equal(200));
-        test('La respuesta contiene precio y compartimentos', () => { const body = res.getBody(); expect(body.precio).to.be.a('number'); expect(body.compartimentos).to.be.an('array'); });
+        test('La respuesta contiene precio y compartimentos', () => {
+          const body = res.getBody() || {};
+          expect(body.precio).to.be.a('number');
+          expect(body.compartimentos).to.be.an('array');
+        });
 
 settings:
   encodeUrl: true

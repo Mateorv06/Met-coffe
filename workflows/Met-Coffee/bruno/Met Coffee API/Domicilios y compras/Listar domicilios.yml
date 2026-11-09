@@ -8,7 +8,7 @@ http:
   url: "{{baseUrl}}/api/domicilios/{{usuarioId}}"
   headers:
     - name: Authorization
-      value: Bearer {{token}}
+      value: Bearer {{clienteToken}}
   auth: inherit
 
 runtime:

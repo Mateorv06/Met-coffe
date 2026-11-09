@@ -1,0 +1,35 @@
+info:
+  name: Preparar segundo pedido - agregar producto
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/carrito/{{usuarioId}}/productos"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{clienteToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "productoId": "{{productoId}}",
+        "cantidad": 1,
+        "molienda": "Molido",
+        "gramos": 250
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('Se agrega el producto del segundo pedido con HTTP 201', () => expect(res.getStatus()).to.equal(201));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

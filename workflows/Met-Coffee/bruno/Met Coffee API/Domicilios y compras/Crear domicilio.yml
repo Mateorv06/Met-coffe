@@ -10,7 +10,7 @@ http:
     - name: Content-Type
       value: application/json
     - name: Authorization
-      value: Bearer {{token}}
+      value: Bearer {{clienteToken}}
   body:
     type: json
     data: |-
@@ -28,9 +28,11 @@ runtime:
     - type: after-response
       code: |-
         test('El domicilio se crea con HTTP 201', () => expect(res.getStatus()).to.equal(201));
-        const body = res.getBody();
+        const body = res.getBody() || {};
         test('El domicilio creado devuelve ID', () => expect(body.id).to.be.a('string').and.not.empty);
-        bru.setEnvVar('direccionId', body.id);
+        if (res.getStatus() === 201 && body.id) {
+          bru.setVar('direccionId', body.id);
+        }
 
 settings:
   encodeUrl: true

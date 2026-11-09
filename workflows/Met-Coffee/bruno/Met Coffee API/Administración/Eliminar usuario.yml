@@ -1,15 +1,21 @@
 info:
   name: Eliminar usuario
   type: http
-  seq: 14
+  seq: 15
 
 http:
   method: DELETE
-  url: "{{baseUrl}}/api/admin/usuarios/{{usuarioId}}"
+  url: "{{baseUrl}}/api/admin/usuarios/{{usuarioDescartableId}}"
   headers:
     - name: Authorization
       value: Bearer {{adminToken}}
   auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('Eliminar usuario responde HTTP 204', () => expect(res.getStatus()).to.equal(204));
 
 settings:
   encodeUrl: true

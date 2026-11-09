@@ -11,6 +11,13 @@ http:
       value: Bearer {{adminToken}}
   auth: inherit
 
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('El dashboard responde HTTP 200', () => expect(res.getStatus()).to.equal(200));
+        test('El dashboard devuelve un objeto JSON', () => expect(res.getBody()).to.be.an('object'));
+
 settings:
   encodeUrl: true
   timeout: 0

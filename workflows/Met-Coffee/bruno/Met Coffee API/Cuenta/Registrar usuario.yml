@@ -22,12 +22,26 @@ http:
 
 runtime:
   scripts:
+    - type: before-request
+      code: |-
+        // Limpia variables de corridas anteriores y crea un usuario nuevo en cada corrida
+        ['clienteToken', 'adminToken', 'usuarioId', 'productoId', 'direccionId', 'pedidoId', 'pedidoAdminId', 'usuarioDescartableId']
+          .forEach((v) => bru.deleteVar(v));
+        const sufijo = Date.now();
+        bru.setVar('usuarioPrueba', 'cliente' + sufijo);
+        bru.setVar('correoPrueba', 'cliente' + sufijo + '@test.local');
+        bru.setVar('passwordPrueba', 'MetCoffee2026!');
     - type: after-response
       code: |-
         test('Registro creado con HTTP 201', () => expect(res.getStatus()).to.equal(201));
-        const body = res.getBody();
-        test('El registro devuelve un ID y rol de cliente', () => { expect(body.id).to.be.a('string').and.not.empty; expect(body.rol).to.eql('CLIENTE'); });
-        bru.setEnvVar('usuarioId', body.id);
+        const body = res.getBody() || {};
+        test('El registro devuelve un ID y rol de cliente', () => {
+          expect(body.id).to.be.a('string').and.not.empty;
+          expect(body.rol).to.eql('CLIENTE');
+        });
+        if (res.getStatus() === 201) {
+          bru.setVar('usuarioId', body.id);
+        }
 
 settings:
   encodeUrl: true

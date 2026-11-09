@@ -7,35 +7,10 @@ request:
   variables:
     - name: baseUrl
       value: http://localhost:8080
-  scripts:
-    - type: before-request
-      code: |-
-        const requestName = req.getName();
-        if (requestName === 'Registrar usuario') {
-          bru.deleteEnvVar('productoId');
-          bru.deleteEnvVar('direccionId');
-          bru.deleteEnvVar('pedidoId');
-        }
-        const clientToken = bru.getEnvVar('clienteToken');
-        const adminToken = bru.getEnvVar('adminToken');
-        const requestUrl = req.getUrl().toString();
-        if (/\/api\/admin\//.test(requestUrl) && requestName !== 'Acceso administrativo sin token') {
-          if (!adminToken) { bru.runner.skipRequest(); }
-          else { req.getHeaders().upsert({ key: 'Authorization', value: 'Bearer ' + adminToken }); }
-        }
-        if (clientToken && /\/api\/(cuenta\/[^/]+\/fusionar-carrito|carrito|domicilios|compras|pedidos)/.test(requestUrl)) {
-          req.getHeaders().upsert({ key: 'Authorization', value: 'Bearer ' + clientToken });
-        }
-        const needsProduct = ['Consultar producto', 'Configurar bolsa', 'Agregar producto al carrito', 'Agregar bolsa al carrito', 'Actualizar item', 'Eliminar item', 'Actualizar producto admin', 'Subir imagen admin', 'Desactivar producto admin', 'Consultar inventario', 'Ajustar inventario', 'Movimientos de producto', 'Confirmar compra con domicilio inexistente (caso negativo)'];
-        if (needsProduct.includes(requestName) && !bru.getEnvVar('productoId')) { bru.runner.skipRequest(); }
-        const needsAddress = ['Actualizar domicilio', 'Seleccionar domicilio principal', 'Confirmar compra con domicilio inexistente (caso negativo)'];
-        if (needsAddress.includes(requestName) && !bru.getEnvVar('direccionId')) { bru.runner.skipRequest(); }
-        const needsOrder = ['Detalle de pedido', 'Cancelar pedido', 'Detalle pedido admin', 'Actualizar estado pedido admin'];
-        if (needsOrder.includes(requestName) && !bru.getEnvVar('pedidoId')) { bru.runner.skipRequest(); }
-    - type: after-response
-      code: |-
-        test('La respuesta tiene código HTTP', function () { expect(res.getStatus()).to.be.a('number'); });
-        if (JSON.stringify(res.getBody())) { test('El cuerpo JSON es válido cuando existe', function () { res.getBody(); }); }
+    - name: adminCorreo
+      value: admin-pruebas@test.local
+    - name: adminPassword
+      value: MetCoffeeAdminTest2026!
 
 docs:
   content: Pruebas de API para una instancia local configurada con MongoDB de pruebas. No ejecutar contra Atlas.

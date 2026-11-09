@@ -8,13 +8,14 @@ http:
   url: "{{baseUrl}}/api/carrito/{{usuarioId}}"
   headers:
     - name: Authorization
-      value: Bearer {{token}}
+      value: Bearer {{clienteToken}}
   auth: inherit
 
 runtime:
   scripts:
     - type: after-response
-      code: test('Limpiar carrito responde HTTP 204', () => expect(res.getStatus()).to.equal(204));
+      code: |-
+        test('Limpiar carrito responde HTTP 204', () => expect(res.getStatus()).to.equal(204));
 
 settings:
   encodeUrl: true

@@ -8,7 +8,7 @@ http:
   url: "{{baseUrl}}/api/pedidos/{{usuarioId}}/{{pedidoId}}"
   headers:
     - name: Authorization
-      value: Bearer {{token}}
+      value: Bearer {{clienteToken}}
   auth: inherit
 
 runtime:
@@ -16,7 +16,7 @@ runtime:
     - type: after-response
       code: |-
         test('El detalle del pedido responde HTTP 200', () => expect(res.getStatus()).to.equal(200));
-        test('El ID coincide con el pedido creado', () => expect(res.getBody().id).to.eql(bru.getEnvVar('pedidoId')));
+        test('El ID coincide con el pedido creado', () => expect((res.getBody() || {}).id).to.eql(bru.getVar('pedidoId')));
 
 settings:
   encodeUrl: true

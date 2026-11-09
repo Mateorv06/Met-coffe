@@ -1,0 +1,37 @@
+info:
+  name: Preparar segundo pedido - confirmar compra
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/compras/{{usuarioId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{clienteToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "direccionId": "{{direccionId}}"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('El segundo pedido se confirma con HTTP 201', () => expect(res.getStatus()).to.equal(201));
+        const body = res.getBody() || {};
+        test('El segundo pedido queda en PROCESANDO', () => expect(body.estado).to.eql('PROCESANDO'));
+        if (res.getStatus() === 201 && body.id) {
+          bru.setVar('pedidoAdminId', body.id);
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

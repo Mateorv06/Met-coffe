@@ -5,11 +5,18 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/api/admin/pedidos/{{pedidoId}}"
+  url: "{{baseUrl}}/api/admin/pedidos/{{pedidoAdminId}}"
   headers:
     - name: Authorization
       value: Bearer {{adminToken}}
   auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('El detalle del pedido responde HTTP 200', () => expect(res.getStatus()).to.equal(200));
+        test('El ID coincide con el segundo pedido', () => expect((res.getBody() || {}).id).to.eql(bru.getVar('pedidoAdminId')));
 
 settings:
   encodeUrl: true

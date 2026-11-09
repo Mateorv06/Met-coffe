@@ -15,8 +15,15 @@ http:
       - name: archivo
         type: file
         value:
-          - ""
+          - imagen-prueba.png
   auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('La imagen se sube con HTTP 200', () => expect(res.getStatus()).to.equal(200));
+        test('El producto queda con la ruta de la imagen', () => expect((res.getBody() || {}).imagen).to.be.a('string').and.include('/uploads/productos/'));
 
 settings:
   encodeUrl: true

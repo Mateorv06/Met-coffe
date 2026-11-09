@@ -10,7 +10,7 @@ http:
     - name: Content-Type
       value: application/json
     - name: Authorization
-      value: Bearer {{token}}
+      value: Bearer {{clienteToken}}
   body:
     type: json
     data: |-
@@ -27,7 +27,7 @@ runtime:
     - type: after-response
       code: |-
         test('Agregar producto responde HTTP 201', () => expect(res.getStatus()).to.equal(201));
-        test('El carrito contiene el producto', () => expect(res.getBody().items).to.be.an('array').that.is.not.empty);
+        test('El carrito contiene el producto', () => expect((res.getBody() || {}).items).to.be.an('array').that.is.not.empty);
 
 settings:
   encodeUrl: true

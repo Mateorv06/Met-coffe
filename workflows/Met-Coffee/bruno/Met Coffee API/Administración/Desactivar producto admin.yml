@@ -1,7 +1,7 @@
 info:
   name: Desactivar producto admin
   type: http
-  seq: 2
+  seq: 16
 
 http:
   method: DELETE
@@ -14,7 +14,8 @@ http:
 runtime:
   scripts:
     - type: after-response
-      code: test('Desactivar producto responde HTTP 204', () => expect(res.getStatus()).to.equal(204));
+      code: |-
+        test('Desactivar producto responde HTTP 204', () => expect(res.getStatus()).to.equal(204));
 
 settings:
   encodeUrl: true

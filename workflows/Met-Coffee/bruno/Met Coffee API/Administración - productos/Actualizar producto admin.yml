@@ -30,7 +30,7 @@ runtime:
     - type: after-response
       code: |-
         test('El producto se actualiza con HTTP 200', () => expect(res.getStatus()).to.equal(200));
-        test('La API devuelve el nombre actualizado', () => expect(res.getBody().nombre).to.eql('Cafe Postman actualizado'));
+        test('La API devuelve el nombre actualizado', () => expect((res.getBody() || {}).nombre).to.eql('Cafe Postman actualizado'));
 
 settings:
   encodeUrl: true

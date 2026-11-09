@@ -8,13 +8,14 @@ http:
   url: "{{baseUrl}}/api/pedidos/{{usuarioId}}/{{pedidoId}}"
   headers:
     - name: Authorization
-      value: Bearer {{token}}
+      value: Bearer {{clienteToken}}
   auth: inherit
 
 runtime:
   scripts:
     - type: after-response
-      code: test('La cancelación responde HTTP 204', () => expect(res.getStatus()).to.equal(204));
+      code: |-
+        test('La cancelación responde HTTP 204', () => expect(res.getStatus()).to.equal(204));
 
 settings:
   encodeUrl: true

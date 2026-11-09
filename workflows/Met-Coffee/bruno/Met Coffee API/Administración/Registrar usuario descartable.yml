@@ -1,0 +1,42 @@
+info:
+  name: Registrar usuario descartable
+  type: http
+  seq: 13
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/cuenta/registro"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "nombreUsuario": "{{usuarioDescartable}}",
+        "correo": "{{correoDescartable}}",
+        "password": "MetCoffee2026!",
+        "telefono": "3009998888"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: before-request
+      code: |-
+        const sufijo = Date.now();
+        bru.setVar('usuarioDescartable', 'descartable' + sufijo);
+        bru.setVar('correoDescartable', 'descartable' + sufijo + '@test.local');
+    - type: after-response
+      code: |-
+        test('El usuario descartable se crea con HTTP 201', () => expect(res.getStatus()).to.equal(201));
+        const body = res.getBody() || {};
+        if (res.getStatus() === 201 && body.id) {
+          bru.setVar('usuarioDescartableId', body.id);
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

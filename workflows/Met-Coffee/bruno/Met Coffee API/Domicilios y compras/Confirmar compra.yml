@@ -1,7 +1,7 @@
 info:
   name: Confirmar compra
   type: http
-  seq: 6
+  seq: 7
 
 http:
   method: POST
@@ -10,7 +10,7 @@ http:
     - name: Content-Type
       value: application/json
     - name: Authorization
-      value: Bearer {{token}}
+      value: Bearer {{clienteToken}}
   body:
     type: json
     data: |-
@@ -23,14 +23,15 @@ runtime:
   scripts:
     - type: after-response
       code: |-
-        const hayProducto = !!bru.getEnvVar('productoId');
-        if (hayProducto) {
-          test('La compra se confirma con HTTP 201', () => expect(res.getStatus()).to.equal(201));
-          const body = res.getBody();
-          test('La respuesta contiene pedido, total e items', () => { expect(body.id).to.be.a('string').and.not.empty; expect(body.total).to.be.a('number').and.above(0); expect(body.items).to.be.an('array').that.is.not.empty; });
-          bru.setEnvVar('pedidoId', body.id);
-        } else {
-          test('Sin producto preparado, el carrito vacío se rechaza con HTTP 409', () => expect(res.getStatus()).to.equal(409));
+        test('La compra se confirma con HTTP 201', () => expect(res.getStatus()).to.equal(201));
+        const body = res.getBody() || {};
+        test('La respuesta contiene pedido, total e items', () => {
+          expect(body.id).to.be.a('string').and.not.empty;
+          expect(body.total).to.be.a('number').and.above(0);
+          expect(body.items).to.be.an('array').that.is.not.empty;
+        });
+        if (res.getStatus() === 201 && body.id) {
+          bru.setVar('pedidoId', body.id);
         }
 
 settings:

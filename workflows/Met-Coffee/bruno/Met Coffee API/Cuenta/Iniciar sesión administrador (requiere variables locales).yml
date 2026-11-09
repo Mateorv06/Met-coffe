@@ -20,24 +20,18 @@ http:
 
 runtime:
   scripts:
-        - type: before-request
-            code: |-
-            const correo = bru.getEnvVar('adminCorreo');
-            const password = bru.getEnvVar('adminPassword');
-
-            if (!correo || !password) {
-              throw new Error('Faltan las credenciales del administrador.');
-            }
-        - type: after-response
-            code: |-
-              test('Login administrativo correcto', () => expect(res.getStatus()).to.equal(200));
-              const body = res.getBody();
-              test('Se recibe un JWT de administrador', () => expect(body.token).to.be.a('string').and.not.empty);
-              bru.setEnvVar('adminToken', body.token);
+    - type: after-response
+      code: |-
+        const body = res.getBody() || {};
+        test('Login administrativo correcto con HTTP 200', () => expect(res.getStatus()).to.equal(200));
+        test('Se recibe un JWT de administrador', () => expect(body.token).to.be.a('string').and.not.empty);
+        test('El usuario devuelto tiene rol ADMINISTRADOR', () => expect(body.usuario.rol).to.eql('ADMINISTRADOR'));
+        if (res.getStatus() === 200 && body.token) {
+          bru.setVar('adminToken', body.token);
+        }
 
 settings:
   encodeUrl: true
   timeout: 0
   followRedirects: true
   maxRedirects: 5
-​

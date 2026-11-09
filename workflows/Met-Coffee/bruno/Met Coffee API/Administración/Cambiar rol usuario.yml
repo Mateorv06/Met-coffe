@@ -1,11 +1,11 @@
 info:
   name: Cambiar rol usuario
   type: http
-  seq: 13
+  seq: 14
 
 http:
   method: PUT
-  url: "{{baseUrl}}/api/admin/usuarios/{{usuarioId}}/rol"
+  url: "{{baseUrl}}/api/admin/usuarios/{{usuarioDescartableId}}/rol"
   headers:
     - name: Content-Type
       value: application/json
@@ -15,9 +15,16 @@ http:
     type: json
     data: |-
       {
-        "rol": "CLIENTE"
+        "rol": "ADMINISTRADOR"
       }
   auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('Cambiar rol responde HTTP 200', () => expect(res.getStatus()).to.equal(200));
+        test('El usuario queda como ADMINISTRADOR', () => expect((res.getBody() || {}).rol).to.eql('ADMINISTRADOR'));
 
 settings:
   encodeUrl: true

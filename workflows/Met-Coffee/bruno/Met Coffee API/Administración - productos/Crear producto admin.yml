@@ -30,9 +30,14 @@ runtime:
     - type: after-response
       code: |-
         test('El producto se crea con HTTP 201', () => expect(res.getStatus()).to.equal(201));
-        const body = res.getBody();
-        test('La respuesta contiene ID y los datos enviados', () => { expect(body.id).to.be.a('string').and.not.empty; expect(body.nombre).to.eql('Cafe Postman'); });
-        bru.setEnvVar('productoId', body.id);
+        const body = res.getBody() || {};
+        test('La respuesta contiene ID y los datos enviados', () => {
+          expect(body.id).to.be.a('string').and.not.empty;
+          expect(body.nombre).to.eql('Cafe Postman');
+        });
+        if (res.getStatus() === 201 && body.id) {
+          bru.setVar('productoId', body.id);
+        }
 
 settings:
   encodeUrl: true

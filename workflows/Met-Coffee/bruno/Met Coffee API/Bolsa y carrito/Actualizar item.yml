@@ -10,7 +10,7 @@ http:
     - name: Content-Type
       value: application/json
     - name: Authorization
-      value: Bearer {{token}}
+      value: Bearer {{clienteToken}}
   body:
     type: json
     data: |-
@@ -24,7 +24,8 @@ http:
 runtime:
   scripts:
     - type: after-response
-      code: test('Actualizar item responde HTTP 200', () => expect(res.getStatus()).to.equal(200));
+      code: |-
+        test('Actualizar item responde HTTP 200', () => expect(res.getStatus()).to.equal(200));
 
 settings:
   encodeUrl: true

@@ -11,6 +11,13 @@ http:
       value: Bearer {{adminToken}}
   auth: inherit
 
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('El listado de pedidos responde HTTP 200', () => expect(res.getStatus()).to.equal(200));
+        test('El resultado es una lista JSON', () => expect(res.getBody()).to.be.an('array'));
+
 settings:
   encodeUrl: true
   timeout: 0

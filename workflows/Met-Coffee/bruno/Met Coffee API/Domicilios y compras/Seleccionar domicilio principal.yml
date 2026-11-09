@@ -8,13 +8,14 @@ http:
   url: "{{baseUrl}}/api/domicilios/{{usuarioId}}/{{direccionId}}/principal"
   headers:
     - name: Authorization
-      value: Bearer {{token}}
+      value: Bearer {{clienteToken}}
   auth: inherit
 
 runtime:
   scripts:
     - type: after-response
-      code: test('Seleccionar domicilio principal responde HTTP 204', () => expect(res.getStatus()).to.equal(204));
+      code: |-
+        test('Seleccionar domicilio principal responde HTTP 204', () => expect(res.getStatus()).to.equal(204));
 
 settings:
   encodeUrl: true

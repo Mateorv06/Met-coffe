@@ -9,6 +9,8 @@ http:
   headers:
     - name: Content-Type
       value: application/json
+    - name: Authorization
+      value: Bearer {{adminToken}}
   body:
     type: json
     data: |-
@@ -26,7 +28,8 @@ http:
 runtime:
   scripts:
     - type: after-response
-      code: test('La API rechaza el nombre vacío con HTTP 400', () => expect(res.getStatus()).to.equal(400));
+      code: |-
+        test('La API rechaza el nombre vacío con HTTP 400', () => expect(res.getStatus()).to.equal(400));
 
 settings:
   encodeUrl: true

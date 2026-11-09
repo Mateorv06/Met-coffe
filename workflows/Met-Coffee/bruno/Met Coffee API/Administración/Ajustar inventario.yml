@@ -20,6 +20,13 @@ http:
       }
   auth: inherit
 
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('Ajustar inventario responde HTTP 200', () => expect(res.getStatus()).to.equal(200));
+        test('El stock queda en 5000 g', () => expect((res.getBody() || {}).stockGramos).to.equal(5000));
+
 settings:
   encodeUrl: true
   timeout: 0

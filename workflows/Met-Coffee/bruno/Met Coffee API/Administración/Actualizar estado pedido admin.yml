@@ -5,7 +5,7 @@ info:
 
 http:
   method: PUT
-  url: "{{baseUrl}}/api/admin/pedidos/{{pedidoId}}/estado"
+  url: "{{baseUrl}}/api/admin/pedidos/{{pedidoAdminId}}/estado"
   headers:
     - name: Content-Type
       value: application/json
@@ -18,6 +18,13 @@ http:
         "estado": "ENVIADO"
       }
   auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('El estado se actualiza con HTTP 200', () => expect(res.getStatus()).to.equal(200));
+        test('El pedido queda en ENVIADO', () => expect((res.getBody() || {}).estado).to.eql('ENVIADO'));
 
 settings:
   encodeUrl: true
