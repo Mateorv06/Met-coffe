@@ -1,0 +1,23 @@
+info:
+  name: Limpiar carrito
+  type: http
+  seq: 7
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/carrito/{{usuarioId}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{token}}
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: test('Limpiar carrito responde HTTP 204', () => expect(res.getStatus()).to.equal(204));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

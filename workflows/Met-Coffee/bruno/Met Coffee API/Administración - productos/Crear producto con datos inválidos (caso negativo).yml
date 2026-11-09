@@ -1,0 +1,35 @@
+info:
+  name: Crear producto con datos inválidos (caso negativo)
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/admin/productos"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "nombre": "",
+        "origen": "Colombia",
+        "perfil": "Prueba inválida",
+        "precioBase": 28000,
+        "stockGramos": 500,
+        "novedad": false,
+        "activo": true
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: test('La API rechaza el nombre vacío con HTTP 400', () => expect(res.getStatus()).to.equal(400));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

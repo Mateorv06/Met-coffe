@@ -1,0 +1,39 @@
+info:
+  name: Crear domicilio
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/domicilios/{{usuarioId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{token}}
+  body:
+    type: json
+    data: |-
+      {
+        "etiqueta": "Casa",
+        "destinatario": "Usuario Postman",
+        "direccion": "Calle de pruebas 123",
+        "telefono": "3001234567",
+        "principal": true
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('El domicilio se crea con HTTP 201', () => expect(res.getStatus()).to.equal(201));
+        const body = res.getBody();
+        test('El domicilio creado devuelve ID', () => expect(body.id).to.be.a('string').and.not.empty);
+        bru.setEnvVar('direccionId', body.id);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

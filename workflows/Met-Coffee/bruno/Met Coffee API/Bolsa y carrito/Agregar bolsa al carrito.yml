@@ -1,0 +1,38 @@
+info:
+  name: Agregar bolsa al carrito
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/carrito/{{usuarioId}}/bolsas"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{token}}
+  body:
+    type: json
+    data: |-
+      {
+        "tamano": "250",
+        "compartimentos": 2,
+        "componentes": [
+          { "productoId": "{{productoId}}", "molienda": "Grano" },
+          { "productoId": "{{productoId}}", "molienda": "Molido" }
+        ]
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('Agregar bolsa responde HTTP 201', () => expect(res.getStatus()).to.equal(201));
+        test('El carrito contiene la bolsa', () => expect(res.getBody().items).to.be.an('array').that.is.not.empty);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

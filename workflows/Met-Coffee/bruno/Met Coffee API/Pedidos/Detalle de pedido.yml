@@ -1,0 +1,25 @@
+info:
+  name: Detalle de pedido
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/pedidos/{{usuarioId}}/{{pedidoId}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{token}}
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('El detalle del pedido responde HTTP 200', () => expect(res.getStatus()).to.equal(200));
+        test('El ID coincide con el pedido creado', () => expect(res.getBody().id).to.eql(bru.getEnvVar('pedidoId')));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

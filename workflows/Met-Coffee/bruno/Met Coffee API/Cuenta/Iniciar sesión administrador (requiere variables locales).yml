@@ -1,0 +1,43 @@
+info:
+  name: Iniciar sesión administrador (requiere variables locales)
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/cuenta/login"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "correo": "{{adminCorreo}}",
+        "password": "{{adminPassword}}"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+        - type: before-request
+            code: |-
+            const correo = bru.getEnvVar('adminCorreo');
+            const password = bru.getEnvVar('adminPassword');
+
+            if (!correo || !password) {
+              throw new Error('Faltan las credenciales del administrador.');
+            }
+        - type: after-response
+            code: |-
+              test('Login administrativo correcto', () => expect(res.getStatus()).to.equal(200));
+              const body = res.getBody();
+              test('Se recibe un JWT de administrador', () => expect(body.token).to.be.a('string').and.not.empty);
+              bru.setEnvVar('adminToken', body.token);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+​

@@ -1,0 +1,23 @@
+info:
+  name: Desactivar producto admin
+  type: http
+  seq: 2
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/admin/productos/{{productoId}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{adminToken}}
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: test('Desactivar producto responde HTTP 204', () => expect(res.getStatus()).to.equal(204));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

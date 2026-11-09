@@ -1,0 +1,40 @@
+info:
+  name: Confirmar compra
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/compras/{{usuarioId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{token}}
+  body:
+    type: json
+    data: |-
+      {
+        "direccionId": "{{direccionId}}"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const hayProducto = !!bru.getEnvVar('productoId');
+        if (hayProducto) {
+          test('La compra se confirma con HTTP 201', () => expect(res.getStatus()).to.equal(201));
+          const body = res.getBody();
+          test('La respuesta contiene pedido, total e items', () => { expect(body.id).to.be.a('string').and.not.empty; expect(body.total).to.be.a('number').and.above(0); expect(body.items).to.be.an('array').that.is.not.empty; });
+          bru.setEnvVar('pedidoId', body.id);
+        } else {
+          test('Sin producto preparado, el carrito vacío se rechaza con HTTP 409', () => expect(res.getStatus()).to.equal(409));
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

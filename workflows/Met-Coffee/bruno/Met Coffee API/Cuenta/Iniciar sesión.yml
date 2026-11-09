@@ -1,0 +1,46 @@
+info:
+  name: Iniciar sesión
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/cuenta/login"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "correo": "{{correoPrueba}}",
+        "password": "{{passwordPrueba}}"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.getBody();
+
+        test('Login correcto con HTTP 200', () => {
+          expect(res.getStatus()).to.equal(200);
+        });
+
+        test('Login devuelve JWT y usuario', () => {
+          expect(body).to.have.property('token');
+          expect(body).to.have.property('usuario');
+          expect(body.usuario).to.have.property('id');
+        });
+
+        if (res.getStatus() === 200 && body.token && body.usuario) {
+          bru.setVar('clienteToken', body.token);
+          bru.setVar('usuarioId', body.usuario.id);
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,31 @@
+info:
+  name: Confirmar compra con domicilio inexistente (caso negativo)
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/compras/{{usuarioId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "direccionId": "domicilio-inexistente-postman"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('La compra con domicilio inexistente se rechaza con HTTP 400', () => expect(res.getStatus()).to.equal(400));
+        test('La API informa que el domicilio no existe', () => expect(res.getBody().message).to.eql('Domicilio no encontrado'));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

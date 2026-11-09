@@ -1,0 +1,41 @@
+info:
+  name: Crear producto admin
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/admin/productos"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{adminToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "nombre": "Cafe Postman",
+        "origen": "Colombia",
+        "perfil": "Chocolate",
+        "precioBase": 28000,
+        "stockGramos": 5000,
+        "novedad": true,
+        "activo": true
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('El producto se crea con HTTP 201', () => expect(res.getStatus()).to.equal(201));
+        const body = res.getBody();
+        test('La respuesta contiene ID y los datos enviados', () => { expect(body.id).to.be.a('string').and.not.empty; expect(body.nombre).to.eql('Cafe Postman'); });
+        bru.setEnvVar('productoId', body.id);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

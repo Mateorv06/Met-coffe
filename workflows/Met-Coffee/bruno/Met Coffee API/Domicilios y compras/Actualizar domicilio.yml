@@ -1,0 +1,37 @@
+info:
+  name: Actualizar domicilio
+  type: http
+  seq: 3
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/domicilios/{{usuarioId}}/{{direccionId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{token}}
+  body:
+    type: json
+    data: |-
+      {
+        "etiqueta": "Casa actualizada",
+        "destinatario": "Usuario Postman",
+        "direccion": "Calle de pruebas 456",
+        "telefono": "3001234567",
+        "principal": true
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('El domicilio se actualiza con HTTP 200', () => expect(res.getStatus()).to.equal(200));
+        test('Se devuelve la dirección actualizada', () => expect(res.getBody().direccion).to.eql('Calle de pruebas 456'));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

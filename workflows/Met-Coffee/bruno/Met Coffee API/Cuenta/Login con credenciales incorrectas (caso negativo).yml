@@ -1,0 +1,32 @@
+info:
+  name: Login con credenciales incorrectas (caso negativo)
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/cuenta/login"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "correo": "no-existe-{{$timestamp}}@test.local",
+        "password": "ClaveIncorrecta123"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('Credenciales incorrectas son rechazadas con HTTP 400', () => expect(res.getStatus()).to.equal(400));
+        test('La API informa el error de autenticación', () => expect(res.getBody().message).to.eql('Credenciales inválidas'));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

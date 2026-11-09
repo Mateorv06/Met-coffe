@@ -1,0 +1,33 @@
+info:
+  name: Actualizar item
+  type: http
+  seq: 5
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/carrito/{{usuarioId}}/items/0"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{token}}
+  body:
+    type: json
+    data: |-
+      {
+        "cantidad": 2,
+        "molienda": "Molido",
+        "gramos": 125
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: test('Actualizar item responde HTTP 200', () => expect(res.getStatus()).to.equal(200));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,39 @@
+info:
+  name: Actualizar producto admin
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/admin/productos/{{productoId}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{adminToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "nombre": "Cafe Postman actualizado",
+        "origen": "Colombia",
+        "perfil": "Chocolate y frutos rojos",
+        "precioBase": 29000,
+        "stockGramos": 5000,
+        "novedad": true,
+        "activo": true
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('El producto se actualiza con HTTP 200', () => expect(res.getStatus()).to.equal(200));
+        test('La API devuelve el nombre actualizado', () => expect(res.getBody().nombre).to.eql('Cafe Postman actualizado'));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

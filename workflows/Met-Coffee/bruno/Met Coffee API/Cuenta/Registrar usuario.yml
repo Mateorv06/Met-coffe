@@ -1,0 +1,36 @@
+info:
+  name: Registrar usuario
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/cuenta/registro"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "nombreUsuario": "{{usuarioPrueba}}",
+        "correo": "{{correoPrueba}}",
+        "password": "{{passwordPrueba}}",
+        "telefono": "3001234567"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('Registro creado con HTTP 201', () => expect(res.getStatus()).to.equal(201));
+        const body = res.getBody();
+        test('El registro devuelve un ID y rol de cliente', () => { expect(body.id).to.be.a('string').and.not.empty; expect(body.rol).to.eql('CLIENTE'); });
+        bru.setEnvVar('usuarioId', body.id);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,44 @@
+
+info:
+  name: Fusionar carrito visitante
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/cuenta/{{usuarioId}}/fusionar-carrito"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "usuarioId": "visitante",
+        "items": []
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: before-request
+      code: |-
+        const token = bru.getVar('clienteToken');
+
+        if (!token) {
+          throw new Error('No hay token. Ejecuta primero Iniciar sesión.');
+        }
+
+        req.setHeader('Authorization', 'Bearer ' + token);
+
+    - type: after-response
+      code: |-
+        test('La fusión del carrito responde HTTP 204', () => {
+          expect(res.getStatus()).to.equal(204);
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

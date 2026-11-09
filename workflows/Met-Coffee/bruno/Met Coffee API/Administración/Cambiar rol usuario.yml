@@ -1,0 +1,26 @@
+info:
+  name: Cambiar rol usuario
+  type: http
+  seq: 13
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/admin/usuarios/{{usuarioId}}/rol"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{adminToken}}
+  body:
+    type: json
+    data: |-
+      {
+        "rol": "CLIENTE"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

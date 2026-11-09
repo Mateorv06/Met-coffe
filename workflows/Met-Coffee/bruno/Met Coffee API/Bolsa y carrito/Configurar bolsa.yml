@@ -1,0 +1,36 @@
+info:
+  name: Configurar bolsa
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/bolsa/configurar"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "tamano": "250",
+        "compartimentos": 2,
+        "componentes": [
+          { "productoId": "{{productoId}}", "molienda": "Grano" },
+          { "productoId": "{{productoId}}", "molienda": "Molido" }
+        ]
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('La configuración de bolsa responde HTTP 200', () => expect(res.getStatus()).to.equal(200));
+        test('La respuesta contiene precio y compartimentos', () => { const body = res.getBody(); expect(body.precio).to.be.a('number'); expect(body.compartimentos).to.be.an('array'); });
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

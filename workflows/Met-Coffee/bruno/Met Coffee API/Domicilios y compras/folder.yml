@@ -1,0 +1,7 @@
+info:
+  name: Domicilios y compras
+  type: folder
+  seq: 6
+
+request:
+  auth: inherit

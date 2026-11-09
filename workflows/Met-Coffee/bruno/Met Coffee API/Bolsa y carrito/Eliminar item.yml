@@ -1,0 +1,23 @@
+info:
+  name: Eliminar item
+  type: http
+  seq: 6
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/carrito/{{usuarioId}}/items/0"
+  headers:
+    - name: Authorization
+      value: Bearer {{token}}
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: test('Eliminar item responde HTTP 204', () => expect(res.getStatus()).to.equal(204));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

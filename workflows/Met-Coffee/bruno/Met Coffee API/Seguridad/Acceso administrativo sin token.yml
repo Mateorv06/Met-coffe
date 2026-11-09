@@ -1,0 +1,22 @@
+info:
+  name: Acceso administrativo sin token
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/admin/productos"
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: before-request
+      code: req.getHeaders().remove('Authorization');
+    - type: after-response
+      code: test('Los endpoints administrativos rechazan solicitudes sin JWT (HTTP 401)', () => expect(res.getStatus()).to.equal(401));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

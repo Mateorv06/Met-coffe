@@ -1,0 +1,7 @@
+info:
+  name: Bolsa y carrito
+  type: folder
+  seq: 5
+
+request:
+  auth: inherit

@@ -1,0 +1,36 @@
+info:
+  name: Agregar producto al carrito
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/carrito/{{usuarioId}}/productos"
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Authorization
+      value: Bearer {{token}}
+  body:
+    type: json
+    data: |-
+      {
+        "productoId": "{{productoId}}",
+        "cantidad": 1,
+        "molienda": "Grano",
+        "gramos": 125
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        test('Agregar producto responde HTTP 201', () => expect(res.getStatus()).to.equal(201));
+        test('El carrito contiene el producto', () => expect(res.getBody().items).to.be.an('array').that.is.not.empty);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

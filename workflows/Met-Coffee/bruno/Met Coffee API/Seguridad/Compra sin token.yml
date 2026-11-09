@@ -1,0 +1,31 @@
+info:
+  name: Compra sin token
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/compras/usuario-sin-token"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "direccionId": "direccion-no-usada"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: before-request
+      code: req.getHeaders().remove('Authorization');
+    - type: after-response
+      code: test('La compra rechaza solicitudes sin JWT (HTTP 401)', () => expect(res.getStatus()).to.equal(401));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

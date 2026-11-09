@@ -1,0 +1,23 @@
+info:
+  name: Seleccionar domicilio principal
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/domicilios/{{usuarioId}}/{{direccionId}}/principal"
+  headers:
+    - name: Authorization
+      value: Bearer {{token}}
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: test('Seleccionar domicilio principal responde HTTP 204', () => expect(res.getStatus()).to.equal(204));
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
